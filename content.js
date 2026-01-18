@@ -4,48 +4,7 @@
   if (document.getElementById(OVERLAY_ID)) return;
 
   const STORAGE_KEY = "blockedDomains";
-
-  function normalizeDomainEntry(raw) {
-    const trimmed = raw.trim().toLowerCase();
-    if (!trimmed) return null;
-
-    let candidate = trimmed;
-    if (candidate.startsWith("*.")) candidate = candidate.slice(2);
-    if (candidate.startsWith(".")) candidate = candidate.slice(1);
-
-    if (candidate.includes("://")) {
-      try {
-        return new URL(candidate).hostname || null;
-      } catch {
-        return null;
-      }
-    }
-
-    candidate = candidate.split("/")[0];
-    candidate = candidate.split("?")[0];
-    candidate = candidate.split("#")[0];
-    candidate = candidate.split(":")[0];
-
-    return candidate || null;
-  }
-
-  function parseBlockedDomains(text) {
-    return (text || "")
-      .split(/\r?\n/)
-      .map(normalizeDomainEntry)
-      .filter(Boolean);
-  }
-
-  function isHostnameBlocked(hostname, blockedDomains) {
-    const host = (hostname || "").toLowerCase();
-    if (!host) return false;
-
-    for (const domain of blockedDomains) {
-      if (host === domain) return true;
-      if (host.endsWith(`.${domain}`)) return true;
-    }
-    return false;
-  }
+  const { isHostnameBlocked, parseBlockedDomains } = BreakTheHabbitDomainUtils;
 
   function blockPage() {
     if (document.getElementById(OVERLAY_ID)) return;

@@ -1,48 +1,9 @@
 const STORAGE_KEY = "blockedDomains";
+const { normalizeTextareaToLines } = BreakTheHabbitDomainUtils;
 
 function setStatus(text) {
   const status = document.getElementById("status");
   status.textContent = text;
-}
-
-function normalizeDomainEntry(raw) {
-  const trimmed = raw.trim().toLowerCase();
-  if (!trimmed) return null;
-
-  let candidate = trimmed;
-
-  if (candidate.startsWith("*.")) candidate = candidate.slice(2);
-  if (candidate.startsWith(".")) candidate = candidate.slice(1);
-
-  if (candidate.includes("://")) {
-    try {
-      return new URL(candidate).hostname || null;
-    } catch {
-      return null;
-    }
-  }
-
-  candidate = candidate.split("/")[0];
-  candidate = candidate.split("?")[0];
-  candidate = candidate.split("#")[0];
-  candidate = candidate.split(":")[0];
-
-  return candidate || null;
-}
-
-function normalizeTextareaToLines(text) {
-  const seen = new Set();
-  const lines = text
-    .split(/\r?\n/)
-    .map(normalizeDomainEntry)
-    .filter(Boolean)
-    .filter((d) => {
-      if (seen.has(d)) return false;
-      seen.add(d);
-      return true;
-    });
-
-  return lines.join("\n");
 }
 
 async function load() {
@@ -66,4 +27,3 @@ document.addEventListener("DOMContentLoaded", () => {
   load();
   document.getElementById("save").addEventListener("click", save);
 });
-

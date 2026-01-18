@@ -1,0 +1,9 @@
+{
+  "name": "break-the-habbit-chrome-extension",
+  "private": true,
+  "version": "1.0.0",
+  "description": "Break the habbit Chrome extension",
+  "scripts": {
+    "test": "node --test"
+  }
+}
