@@ -24,10 +24,33 @@ h1 {
   opacity: 0.85;
 }
 
+.hint.hint-small {
+  margin: 6px 0 16px;
+  font-size: 12px;
+  opacity: 0.75;
+}
+
 .label {
   display: block;
   font-weight: 600;
   margin: 0 0 8px;
+}
+
+.slider-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.slider-row input[type="range"] {
+  flex: 1;
+}
+
+.value {
+  min-width: 44px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
 textarea {
@@ -65,4 +88,3 @@ button:hover {
   font-size: 13px;
   opacity: 0.9;
 }
-

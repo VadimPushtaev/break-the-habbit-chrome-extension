@@ -4,11 +4,20 @@
   if (document.getElementById(OVERLAY_ID)) return;
 
   const STORAGE_KEY = "blockedDomains";
+  const OPACITY_KEY = "overlayOpacity";
+  const DEFAULT_OVERLAY_OPACITY = 0.92;
   const { isHostnameBlocked, parseBlockedDomains } = BreakTheHabbitDomainUtils;
 
-  function blockPage() {
+  function normalizeOverlayOpacity(value) {
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) return DEFAULT_OVERLAY_OPACITY;
+    return Math.min(1, Math.max(0, parsed));
+  }
+
+  function blockPage(overlayOpacity) {
     if (document.getElementById(OVERLAY_ID)) return;
 
+    const normalizedOpacity = normalizeOverlayOpacity(overlayOpacity);
     const style = document.createElement("style");
     style.id = `${OVERLAY_ID}-style`;
     style.textContent = `
@@ -21,7 +30,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      background: rgba(0, 0, 0, 0.92);
+      background: rgba(0, 0, 0, ${normalizedOpacity});
       color: #fff;
       font: 600 14px/1.2 system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
       z-index: 2147483647;
@@ -144,13 +153,18 @@
   }
 
   async function main() {
-    const { [STORAGE_KEY]: blockedDomainsText = "" } =
-      await chrome.storage.sync.get({ [STORAGE_KEY]: "" });
+    const {
+      [STORAGE_KEY]: blockedDomainsText = "",
+      [OPACITY_KEY]: overlayOpacity = DEFAULT_OVERLAY_OPACITY,
+    } = await chrome.storage.sync.get({
+      [STORAGE_KEY]: "",
+      [OPACITY_KEY]: DEFAULT_OVERLAY_OPACITY,
+    });
     const blockedDomains = parseBlockedDomains(blockedDomainsText);
     if (!blockedDomains.length) return;
 
     if (isHostnameBlocked(window.location.hostname, blockedDomains)) {
-      blockPage();
+      blockPage(overlayOpacity);
     }
   }
 
