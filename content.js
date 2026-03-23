@@ -88,6 +88,7 @@
     closeButton.id = `${OVERLAY_ID}-close`;
     closeButton.type = "button";
     closeButton.textContent = "Close";
+    closeButton.tabIndex = -1;
 
     panel.appendChild(title);
     panel.appendChild(closeButton);
@@ -113,14 +114,12 @@
       overlay.remove();
       style.remove();
       restoreScroll();
-      document.removeEventListener("keydown", onKeyDown, true);
     };
 
-    const onKeyDown = (event) => {
-      if (event.key === "Escape") cleanup();
-    };
-
-    closeButton.addEventListener("click", cleanup);
+    closeButton.addEventListener("pointerup", (event) => {
+      if (event.pointerType !== "mouse" || event.button !== 0) return;
+      cleanup();
+    });
 
     const root = document.documentElement;
     if (root && root.dataset.breakTheHabbitOriginalOverflow === undefined) {
@@ -135,21 +134,6 @@
 
     (document.head || document.documentElement).appendChild(style);
     document.documentElement.appendChild(overlay);
-    document.addEventListener("keydown", onKeyDown, true);
-
-    const focusClose = () => {
-      try {
-        closeButton.focus({ preventScroll: true });
-      } catch {
-        closeButton.focus();
-      }
-    };
-
-    if (document.readyState === "loading") {
-      document.addEventListener("DOMContentLoaded", focusClose, { once: true });
-    } else {
-      focusClose();
-    }
   }
 
   async function main() {
