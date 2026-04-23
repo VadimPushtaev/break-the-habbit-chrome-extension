@@ -54,22 +54,26 @@
   }
 
   function isHostnameBlocked(hostname, blockedDomains) {
+    return Boolean(getMatchedBlockedDomain(hostname, blockedDomains));
+  }
+
+  function getMatchedBlockedDomain(hostname, blockedDomains) {
     const host = String(hostname || "").toLowerCase();
-    if (!host) return false;
+    if (!host) return null;
 
     for (const domain of blockedDomains || []) {
       if (!domain) continue;
-      if (host === domain) return true;
-      if (host.endsWith(`.${domain}`)) return true;
+      if (host === domain) return domain;
+      if (host.endsWith(`.${domain}`)) return domain;
     }
-    return false;
+    return null;
   }
 
   return {
+    getMatchedBlockedDomain,
     isHostnameBlocked,
     normalizeDomainEntry,
     normalizeTextareaToLines,
     parseBlockedDomains,
   };
 });
-

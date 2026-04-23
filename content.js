@@ -1,12 +1,18 @@
 (() => {
   const OVERLAY_ID = "break-the-habbit-overlay";
-
-  if (document.getElementById(OVERLAY_ID)) return;
-
   const STORAGE_KEY = "blockedDomains";
   const OPACITY_KEY = "overlayOpacity";
+  const LOCAL_STATS_KEY = "blockedSiteStats";
   const DEFAULT_OVERLAY_OPACITY = 0.92;
-  const { isHostnameBlocked, parseBlockedDomains } = BreakTheHabbitDomainUtils;
+  const { getMatchedBlockedDomain, parseBlockedDomains } = BreakTheHabbitDomainUtils;
+  const {
+    formatElapsedTime,
+    getCountSeverity,
+    getNextBlockedSiteStats,
+    getRecencySeverity,
+  } = BreakTheHabbitStatsUtils;
+
+  if (document.getElementById(OVERLAY_ID)) return;
 
   function normalizeOverlayOpacity(value) {
     const parsed = Number(value);
@@ -14,7 +20,26 @@
     return Math.min(1, Math.max(0, parsed));
   }
 
-  function blockPage(overlayOpacity) {
+  function createStatCard({ idSuffix, label, value, severity }) {
+    const card = document.createElement("div");
+    card.className = `${OVERLAY_ID}-stat ${OVERLAY_ID}-severity-${severity}`;
+
+    const labelElement = document.createElement("p");
+    labelElement.className = `${OVERLAY_ID}-stat-label`;
+    labelElement.id = `${OVERLAY_ID}-${idSuffix}-label`;
+    labelElement.textContent = label;
+
+    const valueElement = document.createElement("p");
+    valueElement.className = `${OVERLAY_ID}-stat-value`;
+    valueElement.id = `${OVERLAY_ID}-${idSuffix}-value`;
+    valueElement.textContent = value;
+
+    card.appendChild(labelElement);
+    card.appendChild(valueElement);
+    return card;
+  }
+
+  function blockPage(overlayOpacity, visitStats) {
     if (document.getElementById(OVERLAY_ID)) return;
 
     const normalizedOpacity = normalizeOverlayOpacity(overlayOpacity);
@@ -41,16 +66,88 @@
     }
     #${OVERLAY_ID}-panel {
       width: min(520px, calc(100vw - 48px));
-      padding: 20px 18px;
-      border: 1px solid rgba(255, 255, 255, 0.18);
-      border-radius: 14px;
-      background: rgba(0, 0, 0, 0.35);
-      text-align: center;
+      padding: 24px 20px 20px;
+      border: 1px solid rgba(255, 255, 255, 0.14);
+      border-radius: 18px;
+      background:
+        linear-gradient(180deg, rgba(24, 24, 24, 0.95), rgba(10, 10, 10, 0.92));
+      box-shadow: 0 24px 70px rgba(0, 0, 0, 0.45);
+      text-align: left;
     }
     #${OVERLAY_ID}-title {
-      font-size: 16px;
+      font-size: 22px;
+      line-height: 1.2;
+      margin: 0 0 8px;
+    }
+    #${OVERLAY_ID}-subtitle {
+      margin: 0 0 18px;
+      color: rgba(255, 255, 255, 0.72);
+      font-size: 14px;
+      line-height: 1.45;
+    }
+    #${OVERLAY_ID}-stats {
+      display: grid;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+    .${OVERLAY_ID}-stat {
+      padding: 14px 14px 15px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .${OVERLAY_ID}-stat-label {
+      margin: 0 0 6px;
+      font-size: 12px;
       line-height: 1.3;
-      margin: 0 0 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.62);
+    }
+    .${OVERLAY_ID}-stat-value {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.1;
+      font-weight: 700;
+    }
+    .${OVERLAY_ID}-severity-neutral {
+      background: rgba(148, 163, 184, 0.12);
+      border-color: rgba(148, 163, 184, 0.26);
+    }
+    .${OVERLAY_ID}-severity-neutral .${OVERLAY_ID}-stat-value {
+      color: #dbe4ef;
+    }
+    .${OVERLAY_ID}-severity-good {
+      background: rgba(74, 222, 128, 0.14);
+      border-color: rgba(74, 222, 128, 0.3);
+    }
+    .${OVERLAY_ID}-severity-good .${OVERLAY_ID}-stat-value {
+      color: #86efac;
+    }
+    .${OVERLAY_ID}-severity-warning {
+      background: rgba(250, 204, 21, 0.14);
+      border-color: rgba(250, 204, 21, 0.28);
+    }
+    .${OVERLAY_ID}-severity-warning .${OVERLAY_ID}-stat-value {
+      color: #fde047;
+    }
+    .${OVERLAY_ID}-severity-bad {
+      background: rgba(251, 146, 60, 0.16);
+      border-color: rgba(251, 146, 60, 0.28);
+    }
+    .${OVERLAY_ID}-severity-bad .${OVERLAY_ID}-stat-value {
+      color: #fdba74;
+    }
+    .${OVERLAY_ID}-severity-very-bad {
+      background: rgba(248, 113, 113, 0.16);
+      border-color: rgba(248, 113, 113, 0.32);
+    }
+    .${OVERLAY_ID}-severity-very-bad .${OVERLAY_ID}-stat-value {
+      color: #fca5a5;
+    }
+    #${OVERLAY_ID}-actions {
+      display: flex;
+      justify-content: flex-end;
     }
     #${OVERLAY_ID}-close {
       appearance: none;
@@ -84,6 +181,32 @@
     title.id = `${OVERLAY_ID}-title`;
     title.textContent = "This site is blocked by Break the habbit.";
 
+    const subtitle = document.createElement("p");
+    subtitle.id = `${OVERLAY_ID}-subtitle`;
+    subtitle.textContent = "Opening it too often or coming back too quickly pushes the numbers into worse colors.";
+
+    const stats = document.createElement("div");
+    stats.id = `${OVERLAY_ID}-stats`;
+    stats.appendChild(
+      createStatCard({
+        idSuffix: "count",
+        label: "Opened today",
+        value: String(visitStats.countToday),
+        severity: visitStats.countSeverity,
+      })
+    );
+    stats.appendChild(
+      createStatCard({
+        idSuffix: "last-opened",
+        label: "Last opened",
+        value: visitStats.lastOpenedText,
+        severity: visitStats.recencySeverity,
+      })
+    );
+
+    const actions = document.createElement("div");
+    actions.id = `${OVERLAY_ID}-actions`;
+
     const closeButton = document.createElement("button");
     closeButton.id = `${OVERLAY_ID}-close`;
     closeButton.type = "button";
@@ -91,7 +214,10 @@
     closeButton.tabIndex = -1;
 
     panel.appendChild(title);
-    panel.appendChild(closeButton);
+    panel.appendChild(subtitle);
+    panel.appendChild(stats);
+    actions.appendChild(closeButton);
+    panel.appendChild(actions);
     overlay.appendChild(panel);
 
     const restoreScroll = () => {
@@ -136,6 +262,36 @@
     document.documentElement.appendChild(overlay);
   }
 
+  async function recordBlockedVisit(blockedDomain) {
+    const { [LOCAL_STATS_KEY]: rawStats = {} } = await chrome.storage.local.get({
+      [LOCAL_STATS_KEY]: {},
+    });
+    const statsByDomain =
+      rawStats && typeof rawStats === "object" && !Array.isArray(rawStats) ? rawStats : {};
+    const now = Date.now();
+    const { previousLastOpenedAt, updatedEntry } = getNextBlockedSiteStats(
+      statsByDomain[blockedDomain],
+      now
+    );
+
+    await chrome.storage.local.set({
+      [LOCAL_STATS_KEY]: {
+        ...statsByDomain,
+        [blockedDomain]: updatedEntry,
+      },
+    });
+
+    const elapsedMs =
+      typeof previousLastOpenedAt === "number" ? Math.max(0, now - previousLastOpenedAt) : NaN;
+
+    return {
+      countToday: updatedEntry.countToday,
+      countSeverity: getCountSeverity(updatedEntry.countToday),
+      lastOpenedText: formatElapsedTime(elapsedMs),
+      recencySeverity: getRecencySeverity(elapsedMs),
+    };
+  }
+
   async function main() {
     const {
       [STORAGE_KEY]: blockedDomainsText = "",
@@ -147,9 +303,11 @@
     const blockedDomains = parseBlockedDomains(blockedDomainsText);
     if (!blockedDomains.length) return;
 
-    if (isHostnameBlocked(window.location.hostname, blockedDomains)) {
-      blockPage(overlayOpacity);
-    }
+    const matchedBlockedDomain = getMatchedBlockedDomain(window.location.hostname, blockedDomains);
+    if (!matchedBlockedDomain) return;
+
+    const visitStats = await recordBlockedVisit(matchedBlockedDomain);
+    blockPage(overlayOpacity, visitStats);
   }
 
   main();

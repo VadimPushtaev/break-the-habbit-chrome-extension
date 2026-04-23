@@ -2,6 +2,7 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const {
+  getMatchedBlockedDomain,
   isHostnameBlocked,
   normalizeDomainEntry,
   normalizeTextareaToLines,
@@ -44,3 +45,8 @@ test("isHostnameBlocked: matches subdomains", () => {
   assert.equal(isHostnameBlocked("notexample.com", ["example.com"]), false);
 });
 
+test("getMatchedBlockedDomain: returns matching configured domain", () => {
+  assert.equal(getMatchedBlockedDomain("example.com", ["example.com", "test.com"]), "example.com");
+  assert.equal(getMatchedBlockedDomain("deep.a.example.com", ["example.com"]), "example.com");
+  assert.equal(getMatchedBlockedDomain("nope.com", ["example.com"]), null);
+});
