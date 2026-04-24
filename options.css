@@ -19,6 +19,11 @@ h1 {
   margin: 0 0 10px;
 }
 
+h2 {
+  font-size: 17px;
+  margin: 0 0 8px;
+}
+
 .hint {
   margin: 0 0 16px;
   opacity: 0.85;
@@ -64,6 +69,102 @@ textarea {
     "Liberation Mono", "Courier New", monospace;
 }
 
+.section {
+  margin-top: 24px;
+}
+
+.good-link-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.good-link-row input[type="url"] {
+  flex: 1;
+}
+
+input[type="url"] {
+  width: 100%;
+  padding: 12px 12px;
+  border-radius: 10px;
+  border: 1px solid rgba(127, 127, 127, 0.35);
+  font: inherit;
+  background: transparent;
+  color: inherit;
+}
+
+.bookmark-suggestions,
+.good-links-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.saved-links-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+  margin-top: 18px;
+}
+
+.link-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(127, 127, 127, 0.28);
+  background: rgba(127, 127, 127, 0.08);
+}
+
+.link-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.link-favicon {
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
+  flex: 0 0 auto;
+}
+
+.link-text {
+  min-width: 0;
+}
+
+.link-title,
+.link-url {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.link-title {
+  font-weight: 600;
+}
+
+.link-url {
+  font-size: 12px;
+  opacity: 0.72;
+}
+
+.empty-state {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  border: 1px dashed rgba(127, 127, 127, 0.28);
+  opacity: 0.8;
+}
+
+.empty-state.compact {
+  padding: 10px 12px;
+}
+
 .actions {
   display: flex;
   align-items: center;
@@ -84,7 +185,23 @@ button:hover {
   background: rgba(127, 127, 127, 0.18);
 }
 
+.secondary-button {
+  white-space: nowrap;
+}
+
 .status {
   font-size: 13px;
   opacity: 0.9;
+}
+
+.status[data-state="error"] {
+  color: #c62828;
+}
+
+.status[data-state="warning"] {
+  color: #a06a00;
+}
+
+.status[data-state="success"] {
+  color: #1f7a36;
 }

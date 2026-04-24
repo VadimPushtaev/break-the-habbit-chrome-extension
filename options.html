@@ -36,6 +36,38 @@
         rows="12"
       ></textarea>
 
+      <section class="section">
+        <h2>Better look at</h2>
+        <p class="hint">
+          Save good links to show on the block screen instead. Start typing to pull
+          suggestions from your Bookmarks Bar.
+        </p>
+
+        <label class="label" for="good-link-input">Add good link</label>
+        <div class="good-link-row">
+          <input
+            id="good-link-input"
+            type="url"
+            placeholder="https://example.com/article"
+            autocomplete="off"
+          />
+          <button id="add-good-link" type="button">Add link</button>
+        </div>
+
+        <div
+          id="bookmark-suggestions"
+          class="bookmark-suggestions"
+          role="list"
+          aria-label="Bookmark suggestions"
+        ></div>
+
+        <div class="saved-links-header">
+          <span class="label">Saved good links</span>
+          <span class="hint hint-small">The first 5 appear on the blocked overlay.</span>
+        </div>
+        <div id="good-links-list" class="good-links-list" role="list"></div>
+      </section>
+
       <div class="actions">
         <button id="save" type="button">Save</button>
         <span id="status" class="status" role="status" aria-live="polite"></span>
@@ -43,6 +75,7 @@
     </main>
 
     <script src="domain-utils.js"></script>
+    <script src="good-links-utils.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

@@ -2,15 +2,14 @@
   const OVERLAY_ID = "break-the-habbit-overlay";
   const STORAGE_KEY = "blockedDomains";
   const OPACITY_KEY = "overlayOpacity";
+  const GOOD_LINKS_KEY = "goodLinks";
   const LOCAL_STATS_KEY = "blockedSiteStats";
   const DEFAULT_OVERLAY_OPACITY = 0.92;
   const { getMatchedBlockedDomain, parseBlockedDomains } = BreakTheHabbitDomainUtils;
-  const {
-    formatElapsedTime,
-    getCountSeverity,
-    getNextBlockedSiteStats,
-    getRecencySeverity,
-  } = BreakTheHabbitStatsUtils;
+  const { getDisplayHostname, getFaviconUrl, selectOverlayGoodLinks } =
+    BreakTheHabbitGoodLinksUtils;
+  const { formatElapsedTime, getCountSeverity, getNextBlockedSiteStats, getRecencySeverity } =
+    BreakTheHabbitStatsUtils;
 
   if (document.getElementById(OVERLAY_ID)) return;
 
@@ -39,7 +38,60 @@
     return card;
   }
 
-  function blockPage(overlayOpacity, visitStats) {
+  function createBetterLookSection(goodLinks) {
+    if (!goodLinks.length) return null;
+
+    const section = document.createElement("section");
+    section.id = `${OVERLAY_ID}-better-look`;
+
+    const heading = document.createElement("p");
+    heading.className = `${OVERLAY_ID}-section-title`;
+    heading.textContent = "Better look at";
+    section.appendChild(heading);
+
+    const list = document.createElement("div");
+    list.id = `${OVERLAY_ID}-good-links`;
+
+    goodLinks.forEach((link) => {
+      const linkElement = document.createElement("a");
+      linkElement.className = `${OVERLAY_ID}-good-link`;
+      linkElement.href = link.url;
+
+      const favicon = document.createElement("img");
+      favicon.className = `${OVERLAY_ID}-good-link-favicon`;
+      favicon.src = getFaviconUrl(link.url, 32);
+      favicon.alt = "";
+      favicon.width = 20;
+      favicon.height = 20;
+      favicon.loading = "lazy";
+
+      const text = document.createElement("span");
+      text.className = `${OVERLAY_ID}-good-link-text`;
+
+      const title = document.createElement("span");
+      title.className = `${OVERLAY_ID}-good-link-title`;
+      title.textContent = link.title;
+
+      const host = document.createElement("span");
+      host.className = `${OVERLAY_ID}-good-link-host`;
+      host.textContent = getDisplayHostname(link.url);
+
+      text.appendChild(title);
+      text.appendChild(host);
+      linkElement.appendChild(favicon);
+      linkElement.appendChild(text);
+      linkElement.addEventListener("click", (event) => {
+        event.preventDefault();
+        window.location.assign(link.url);
+      });
+      list.appendChild(linkElement);
+    });
+
+    section.appendChild(list);
+    return section;
+  }
+
+  function blockPage(overlayOpacity, visitStats, goodLinks) {
     if (document.getElementById(OVERLAY_ID)) return;
 
     const normalizedOpacity = normalizeOverlayOpacity(overlayOpacity);
@@ -149,6 +201,66 @@
       display: flex;
       justify-content: flex-end;
     }
+    #${OVERLAY_ID}-better-look {
+      margin-bottom: 18px;
+    }
+    .${OVERLAY_ID}-section-title {
+      margin: 0 0 10px;
+      font-size: 12px;
+      line-height: 1.3;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: rgba(255, 255, 255, 0.62);
+    }
+    #${OVERLAY_ID}-good-links {
+      display: grid;
+      gap: 10px;
+    }
+    .${OVERLAY_ID}-good-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 13px;
+      border-radius: 14px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      background: rgba(255, 255, 255, 0.05);
+      color: #fff;
+      text-decoration: none;
+      transition: background 120ms ease, border-color 120ms ease;
+    }
+    .${OVERLAY_ID}-good-link:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.16);
+    }
+    .${OVERLAY_ID}-good-link:focus-visible {
+      outline: 2px solid rgba(255, 255, 255, 0.7);
+      outline-offset: 2px;
+    }
+    .${OVERLAY_ID}-good-link-favicon {
+      width: 20px;
+      height: 20px;
+      border-radius: 5px;
+      flex: 0 0 auto;
+    }
+    .${OVERLAY_ID}-good-link-text {
+      display: grid;
+      gap: 3px;
+      min-width: 0;
+    }
+    .${OVERLAY_ID}-good-link-title,
+    .${OVERLAY_ID}-good-link-host {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .${OVERLAY_ID}-good-link-title {
+      font-size: 14px;
+      font-weight: 600;
+    }
+    .${OVERLAY_ID}-good-link-host {
+      font-size: 12px;
+      color: rgba(255, 255, 255, 0.66);
+    }
     #${OVERLAY_ID}-close {
       appearance: none;
       border: 1px solid rgba(255, 255, 255, 0.28);
@@ -216,6 +328,10 @@
     panel.appendChild(title);
     panel.appendChild(subtitle);
     panel.appendChild(stats);
+    const betterLookSection = createBetterLookSection(goodLinks);
+    if (betterLookSection) {
+      panel.appendChild(betterLookSection);
+    }
     actions.appendChild(closeButton);
     panel.appendChild(actions);
     overlay.appendChild(panel);
@@ -296,9 +412,11 @@
     const {
       [STORAGE_KEY]: blockedDomainsText = "",
       [OPACITY_KEY]: overlayOpacity = DEFAULT_OVERLAY_OPACITY,
+      [GOOD_LINKS_KEY]: storedGoodLinks = [],
     } = await chrome.storage.sync.get({
       [STORAGE_KEY]: "",
       [OPACITY_KEY]: DEFAULT_OVERLAY_OPACITY,
+      [GOOD_LINKS_KEY]: [],
     });
     const blockedDomains = parseBlockedDomains(blockedDomainsText);
     if (!blockedDomains.length) return;
@@ -307,7 +425,8 @@
     if (!matchedBlockedDomain) return;
 
     const visitStats = await recordBlockedVisit(matchedBlockedDomain);
-    blockPage(overlayOpacity, visitStats);
+    const goodLinks = selectOverlayGoodLinks(storedGoodLinks, 5);
+    blockPage(overlayOpacity, visitStats, goodLinks);
   }
 
   main();
