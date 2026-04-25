@@ -8,8 +8,7 @@
   const { getMatchedBlockedDomain, parseBlockedDomains } = BreakTheHabbitDomainUtils;
   const { getDisplayHostname, getFaviconUrl, selectOverlayGoodLinks } =
     BreakTheHabbitGoodLinksUtils;
-  const { formatElapsedTime, getCountSeverity, getNextBlockedSiteStats, getRecencySeverity } =
-    BreakTheHabbitStatsUtils;
+  const { getBlockedSiteStatsSummary, getNextBlockedSiteStats } = BreakTheHabbitStatsUtils;
 
   if (document.getElementById(OVERLAY_ID)) return;
 
@@ -91,7 +90,7 @@
     return section;
   }
 
-  function blockPage(overlayOpacity, visitStats, goodLinks) {
+  function blockPage(overlayOpacity, visitStats, goodLinks, onOverlayClosed) {
     if (document.getElementById(OVERLAY_ID)) return;
 
     const normalizedOpacity = normalizeOverlayOpacity(overlayOpacity);
@@ -358,9 +357,17 @@
       restoreScroll();
     };
 
-    closeButton.addEventListener("pointerup", (event) => {
+    let isClosing = false;
+    closeButton.addEventListener("pointerup", async (event) => {
       if (event.pointerType !== "mouse" || event.button !== 0) return;
-      cleanup();
+      if (isClosing) return;
+      isClosing = true;
+      closeButton.disabled = true;
+      try {
+        await onOverlayClosed();
+      } finally {
+        cleanup();
+      }
     });
 
     const root = document.documentElement;
@@ -378,6 +385,16 @@
     document.documentElement.appendChild(overlay);
   }
 
+  async function getBlockedVisitStats(blockedDomain) {
+    const { [LOCAL_STATS_KEY]: rawStats = {} } = await chrome.storage.local.get({
+      [LOCAL_STATS_KEY]: {},
+    });
+    const statsByDomain =
+      rawStats && typeof rawStats === "object" && !Array.isArray(rawStats) ? rawStats : {};
+
+    return getBlockedSiteStatsSummary(statsByDomain[blockedDomain]);
+  }
+
   async function recordBlockedVisit(blockedDomain) {
     const { [LOCAL_STATS_KEY]: rawStats = {} } = await chrome.storage.local.get({
       [LOCAL_STATS_KEY]: {},
@@ -385,10 +402,7 @@
     const statsByDomain =
       rawStats && typeof rawStats === "object" && !Array.isArray(rawStats) ? rawStats : {};
     const now = Date.now();
-    const { previousLastOpenedAt, updatedEntry } = getNextBlockedSiteStats(
-      statsByDomain[blockedDomain],
-      now
-    );
+    const { updatedEntry } = getNextBlockedSiteStats(statsByDomain[blockedDomain], now);
 
     await chrome.storage.local.set({
       [LOCAL_STATS_KEY]: {
@@ -396,16 +410,6 @@
         [blockedDomain]: updatedEntry,
       },
     });
-
-    const elapsedMs =
-      typeof previousLastOpenedAt === "number" ? Math.max(0, now - previousLastOpenedAt) : NaN;
-
-    return {
-      countToday: updatedEntry.countToday,
-      countSeverity: getCountSeverity(updatedEntry.countToday),
-      lastOpenedText: formatElapsedTime(elapsedMs),
-      recencySeverity: getRecencySeverity(elapsedMs),
-    };
   }
 
   async function main() {
@@ -424,9 +428,9 @@
     const matchedBlockedDomain = getMatchedBlockedDomain(window.location.hostname, blockedDomains);
     if (!matchedBlockedDomain) return;
 
-    const visitStats = await recordBlockedVisit(matchedBlockedDomain);
+    const visitStats = await getBlockedVisitStats(matchedBlockedDomain);
     const goodLinks = selectOverlayGoodLinks(storedGoodLinks, 5);
-    blockPage(overlayOpacity, visitStats, goodLinks);
+    blockPage(overlayOpacity, visitStats, goodLinks, () => recordBlockedVisit(matchedBlockedDomain));
   }
 
   main();

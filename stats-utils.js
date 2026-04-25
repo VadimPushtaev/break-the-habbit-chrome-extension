@@ -55,6 +55,27 @@
     };
   }
 
+  function getBlockedSiteStatsSummary(entry, now = Date.now()) {
+    const nowDate = now instanceof Date ? now : new Date(now);
+    const dayKey = getLocalDayKey(nowDate);
+    const currentEntry = entry && typeof entry === "object" ? entry : {};
+    const countToday =
+      currentEntry.dayKey === dayKey && Number.isFinite(currentEntry.countToday)
+        ? Math.max(0, Math.floor(currentEntry.countToday))
+        : 0;
+    const lastOpenedAt =
+      typeof currentEntry.lastOpenedAt === "number" ? currentEntry.lastOpenedAt : null;
+    const elapsedMs =
+      typeof lastOpenedAt === "number" ? Math.max(0, nowDate.getTime() - lastOpenedAt) : NaN;
+
+    return {
+      countToday,
+      countSeverity: getCountSeverity(countToday),
+      lastOpenedText: formatElapsedTime(elapsedMs),
+      recencySeverity: getRecencySeverity(elapsedMs),
+    };
+  }
+
   function getCountSeverity(countToday) {
     const normalizedCount = Math.max(0, Number(countToday) || 0);
     if (normalizedCount >= 5) return COUNT_SEVERITY.VERY_BAD;
@@ -95,6 +116,7 @@
     COUNT_SEVERITY,
     RECENCY_SEVERITY,
     formatElapsedTime,
+    getBlockedSiteStatsSummary,
     getCountSeverity,
     getLocalDayKey,
     getNextBlockedSiteStats,

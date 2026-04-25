@@ -5,6 +5,7 @@ const {
   COUNT_SEVERITY,
   RECENCY_SEVERITY,
   formatElapsedTime,
+  getBlockedSiteStatsSummary,
   getCountSeverity,
   getLocalDayKey,
   getNextBlockedSiteStats,
@@ -59,6 +60,36 @@ test("getNextBlockedSiteStats: resets count when the day changes", () => {
     dayKey: "2026-04-24",
     countToday: 1,
     lastOpenedAt: new Date("2026-04-24T08:00:00").getTime(),
+  });
+});
+
+test("getBlockedSiteStatsSummary: displays stored count without incrementing it", () => {
+  const existingEntry = {
+    dayKey: "2026-04-24",
+    countToday: 4,
+    lastOpenedAt: new Date("2026-04-24T09:00:00").getTime(),
+  };
+
+  assert.deepEqual(getBlockedSiteStatsSummary(existingEntry, "2026-04-24T10:30:00"), {
+    countToday: 4,
+    countSeverity: COUNT_SEVERITY.BAD,
+    lastOpenedText: "1 hour ago",
+    recencySeverity: RECENCY_SEVERITY.BAD,
+  });
+});
+
+test("getBlockedSiteStatsSummary: resets only the displayed daily count on a new day", () => {
+  const existingEntry = {
+    dayKey: "2026-04-23",
+    countToday: 9,
+    lastOpenedAt: new Date("2026-04-23T22:00:00").getTime(),
+  };
+
+  assert.deepEqual(getBlockedSiteStatsSummary(existingEntry, "2026-04-24T08:00:00"), {
+    countToday: 0,
+    countSeverity: COUNT_SEVERITY.GOOD,
+    lastOpenedText: "10 hours ago",
+    recencySeverity: RECENCY_SEVERITY.WARNING,
   });
 });
 

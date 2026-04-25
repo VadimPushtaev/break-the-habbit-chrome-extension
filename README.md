@@ -13,6 +13,8 @@ This is a minimal Chrome (Manifest V3) extension that blocks configured domains 
 
 - Runs a content script on `<all_urls>`
 - If the current hostname matches your blocked list (exact domain or any subdomain), shows an overlay with a centered **Close** button
+- Shows how many times you intentionally opened that blocked site today and how recently you last did it
+- Counts a blocked site as opened only when you close the overlay. Navigating away, following a suggested good link, or closing the tab does not update the opened-today count or last-opened time.
 
 ## Configure blocked domains
 
